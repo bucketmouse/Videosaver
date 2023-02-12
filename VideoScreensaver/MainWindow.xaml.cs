@@ -45,6 +45,11 @@ namespace VideoScreensaver {
 
         private void ScrKeyDown(object sender, KeyEventArgs e) {
             switch (e.Key) {
+                case Key.MediaNextTrack:
+                case Key.Next:
+                case Key.Tab:
+                    NextMediaItem();
+                    break;
                 case Key.Up:
                 case Key.VolumeUp:
                     volume += 0.1;
@@ -83,6 +88,7 @@ namespace VideoScreensaver {
         // End the screensaver only if running in full screen. No-op in preview mode.
         private void EndFullScreensaver() {
             if (!preview) {
+                PreferenceManager.WriteResumeSetting(FullScreenMedia.Source.AbsolutePath, FullScreenMedia.Position.Ticks);
                 Close();
             }
         }
@@ -93,6 +99,20 @@ namespace VideoScreensaver {
                 ShowError("This screensaver needs to be configured before any video is displayed.");
             } else
             {
+                try
+                {
+                    string resumePath = PreferenceManager.ReadResumePath();
+                    long resumeTime = PreferenceManager.ReadResumeTime();
+                    if (!string.IsNullOrEmpty(resumePath) && System.IO.File.Exists(resumePath))
+                    { 
+                        LoadMedia(resumePath, resumeTime); 
+                        return;
+                    } 
+                }
+                catch  
+                {
+                    // do nothing, NextMediaItem will reset resumepath/time
+                }
                 NextMediaItem();
             }
         }
@@ -100,33 +120,29 @@ namespace VideoScreensaver {
         private void NextMediaItem()
         {
             currentItem = (currentItem + 1) % videoPaths.Count;
-
-            FileInfo fi = new FileInfo(videoPaths[currentItem]);
+            LoadMedia(videoPaths[currentItem]); 
+        }
+   
+        private void LoadMedia(string filename, long startTime = 0)
+        {
+            FileInfo fi = new FileInfo(filename);
             if (fi.Extension.Equals(".png", StringComparison.OrdinalIgnoreCase) ||
                 fi.Extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase))
             {
-                LoadImage(fi.FullName);
+                FullScreenImage.Visibility = Visibility.Visible;
+                FullScreenMedia.Visibility = Visibility.Collapsed;
+                FullScreenImage.Source = new BitmapImage(new Uri(filename));
+                imageTimer.Start();
             }
             else
-            {
-                LoadMedia(fi.FullName);
+            { 
+                FullScreenImage.Visibility = Visibility.Collapsed;
+                FullScreenMedia.Visibility = Visibility.Visible;
+                FullScreenMedia.Source = new Uri(filename);
+                FullScreenMedia.Position = new TimeSpan(startTime);
+                FullScreenMedia.Play();
             }
-        }
-
-        private void LoadImage(string filename)
-        {
-            FullScreenImage.Visibility = Visibility.Visible;
-            FullScreenMedia.Visibility = Visibility.Collapsed;
-            FullScreenImage.Source = new BitmapImage(new Uri(filename));
-            imageTimer.Start();
-        }
-
-        private void LoadMedia(string filename)
-        {
-            FullScreenImage.Visibility = Visibility.Collapsed;
-            FullScreenMedia.Visibility = Visibility.Visible;
-            FullScreenMedia.Source = new Uri(filename);
-            FullScreenMedia.Play();
+            PreferenceManager.WriteResumeSetting(FullScreenMedia.Source.AbsolutePath, startTime); 
         }
 
         private void ShowError(string errorMessage) {

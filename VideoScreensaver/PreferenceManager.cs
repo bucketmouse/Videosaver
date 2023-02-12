@@ -14,6 +14,8 @@ namespace VideoScreensaver {
         public const string BASE_KEY = "VideoScreensaver";
         public const string VIDEO_PREFS_FILE = "Videos";
         public const string VOLUME_PREFS_FILE = "Volume";
+        public const string RESUMETIME_PREFS_FILE = "Resume";
+        public const string MEDIAID_PREFS_FILE = "MediaID";
 
         public static List<String> ReadVideoSettings() {
             List<String> videos = new List<String>();
@@ -37,8 +39,39 @@ namespace VideoScreensaver {
             return 0;
         }
 
-        public static void WriteVolumeSetting(double volume) {
+        public static void WriteVolumeSetting(double volume)
+        {
             WriteStringValue(VOLUME_PREFS_FILE, volume.ToString());
+        }
+
+        public static void WriteResumeSetting(string mediaID, long timeMsecs)
+        {
+            WriteStringValue(RESUMETIME_PREFS_FILE, timeMsecs.ToString());
+            WriteStringValue(MEDIAID_PREFS_FILE, mediaID);
+        }
+
+
+        public static string ReadResumePath()
+        {
+            try
+            {
+                return Convert.ToString(ReadStringValue(MEDIAID_PREFS_FILE));
+            }
+            catch (System.FormatException) { }
+            catch (System.OverflowException) { }
+            return "";
+        }
+
+
+        public static long ReadResumeTime()
+        {
+            try
+            {
+                return Convert.ToInt64(ReadStringValue(RESUMETIME_PREFS_FILE));
+            }
+            catch (System.FormatException) { }
+            catch (System.OverflowException) { }
+            return 0;
         }
 
         private static Tuple<RegistryKey, RegistryKey> OpenRegistryKey() {
